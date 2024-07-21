@@ -26,7 +26,6 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 
@@ -36,27 +35,34 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	//스웨거
+	// 스웨거
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
 
-	//jwt
-	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
-	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+	// JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
-	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-
-	//시큐리티
+	// 시큐리티
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
-	//레디스
+	// 레디스
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+	// 자십트
+	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
 
-	//?
+	// JSON
 	implementation 'org.json:json:20231013'
 
+	// PostgreSQL
+	implementation 'org.postgresql:postgresql:42.7.2'
+
+	// Gson
+	implementation 'com.google.code.gson:gson:2.8.9'
+
+	// Commons Codec
+	implementation 'commons-codec:commons-codec:1.15'
 }
 
 tasks.named('test') {

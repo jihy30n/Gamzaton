@@ -1,10 +1,8 @@
-package com.example.demo.user.jwt;
-
+package com.example.demo.user.service.jwt;
 
 import com.example.demo.core.error.ErrorJwtCode;
-import com.example.demo.user.service.jwt.RedisService;
+import com.example.demo.core.error.exeption.ExpiredRefreshTokenException;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import jakarta.servlet.FilterChain;
@@ -12,7 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.json.JSONObject;
+import org.json.simple.JSONObject;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,51 +18,50 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-
-@RequiredArgsConstructor
 @Component
+@RequiredArgsConstructor
 public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
 
-    private final JwtProvider jwtProvider;
-    private final RedisService redisService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String accessToken = jwtTokenProvider.resolveAccessToken(request);
+        String refreshToken = jwtTokenProvider.resolveRefreshToken(request);
         String path = request.getRequestURI();
-        String ipAddress = request.getRemoteAddr();
-
-        if (path.contains("/login") || path.contains("/signup")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String accessToken = jwtProvider.resolveAccessToken(request);
-        String refreshToken = jwtProvider.resolveRefreshToken(request);
         ErrorJwtCode errorCode;
+
+        if (accessToken == null && refreshToken != null && path.contains("/reissue")) {
+            try {
+                jwtTokenProvider.validateRefreshToken(refreshToken);
+                filterChain.doFilter(request, response);
+            } catch (ExpiredRefreshTokenException e) {
+                errorCode = ErrorJwtCode.EXPIRED_REFRESH_TOKEN;
+                setResponse(response, errorCode);
+                return;
+            }
+        }
 
         try {
             if (accessToken == null && refreshToken != null) {
-                if (jwtProvider.validateToken(refreshToken) && redisService.isRefreshTokenValid(refreshToken, ipAddress)
-                        && path.contains("/reissue")) {
+                if (path.contains("/reissue") && jwtTokenProvider.validateRefreshToken(refreshToken)) {
                     filterChain.doFilter(request, response);
+                    return;
                 }
-            } else if (accessToken == null) {
+            } else if (accessToken == null && refreshToken == null) {
                 filterChain.doFilter(request, response);
                 return;
-            } else if (jwtProvider.validateToken(accessToken) && !redisService.isTokenInBlacklist(accessToken)) {
-                this.setAuthentication(accessToken);
+            } else {
+                if (jwtTokenProvider.validateAccessToken(accessToken)) {
+                    this.setAuthentication(accessToken);
+                }
             }
         } catch (MalformedJwtException e) {
-            errorCode = ErrorJwtCode.INVALID_JWT_TOKEN;
+            errorCode = ErrorJwtCode.INVALID_JWT_FORMAT;
             setResponse(response, errorCode);
             return;
         } catch (ExpiredJwtException e) {
-            if (accessToken != null) {
-                errorCode = ErrorJwtCode.ACCESS_TOKEN_EXPIRED;
-            } else {
-                errorCode = ErrorJwtCode.REFRESH_TOKEN_EXPIRED;
-            }
+            errorCode = ErrorJwtCode.EXPIRED_ACCESS_TOKEN;
             setResponse(response, errorCode);
             return;
         } catch (UnsupportedJwtException e) {
@@ -72,24 +69,27 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
             setResponse(response, errorCode);
             return;
         } catch (IllegalArgumentException e) {
-            errorCode = ErrorJwtCode.EMPTY_JWT_CLAIMS;
+            errorCode = ErrorJwtCode.INVALID_VALUE;
             setResponse(response, errorCode);
             return;
-        } catch (JwtException e) {
-            errorCode = ErrorJwtCode.JWT_SIGNATURE_MISMATCH;
-            setResponse(response, errorCode);
-            return;
-
         } catch (RuntimeException e) {
-            errorCode = ErrorJwtCode.JWT_COMPLEX_ERROR;
+            e.printStackTrace();
+            errorCode = ErrorJwtCode.RUNTIME_EXCEPTION;
             setResponse(response, errorCode);
             return;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
         filterChain.doFilter(request, response);
     }
 
-    //인증 실패 시 클라이언트에게 응답을 전달
+    private void setAuthentication(String token) throws Exception {
+        Authentication authentication = jwtTokenProvider.getAuthentication(token);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
     private void setResponse(HttpServletResponse response, ErrorJwtCode errorCode) throws IOException {
         JSONObject json = new JSONObject();
         response.setContentType("application/json;charset=UTF-8");
@@ -101,12 +101,4 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
         response.getWriter().print(json);
         response.getWriter().flush();
     }
-
-    private void setAuthentication(String token) {
-        // 토큰으로부터 유저 정보를 받아옴
-        Authentication authentication = jwtProvider.getAuthentication(token);
-        // SecurityContext 에 Authentication 객체를 저장
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
-
 }

@@ -2,13 +2,12 @@ package com.example.demo.user.service;
 
 
 import com.example.demo.core.error.exeption.UnAuthorizedException;
-import com.example.demo.user.jwt.JwtProvider;
-import com.example.demo.user.custom.UserRole;
 import com.example.demo.user.dto.LoginRequestDto;
 import com.example.demo.user.dto.LoginResponseDto;
 import com.example.demo.user.entity.UserEntity;
 import com.example.demo.user.repo.UserRepository;
-import com.example.demo.user.service.jwt.RedisService;
+import com.example.demo.user.service.jwt.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,8 +24,7 @@ import static com.example.demo.core.error.ErrorCode.ACCESS_DENIED_EXCEPTION;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final JwtProvider jwtProvider;
-    private final RedisService redisService;
+    private final JwtTokenProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
     public LoginResponseDto login(LoginRequestDto requestDto, HttpServletResponse response) {
 
@@ -42,32 +40,43 @@ public class UserService {
             }
         }
 
-        UserEntity userEntity = userRepository.findByEmail(requestDto.getEmail()).orElseThrow();
+        UserEntity userEntity = userRepository.findByEmail(requestDto.getEmail());
 
         //패스워드 다를 때
         if (!passwordEncoder.matches(requestDto.getPassword(), userEntity.getPassword())) {
             throw new UnAuthorizedException("401", ACCESS_DENIED_EXCEPTION);
         }
 
-        this.setJwtTokenInHeader(requestDto.getEmail(), response);
+        try {
+            this.setJwtTokenInHeader(userEntity.getId(), String.valueOf(userEntity.getUserRole()), response);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         return LoginResponseDto.builder()
                 .responseCode("200")
                 .build();
     }
 
-    public void setJwtTokenInHeader(String email, HttpServletResponse response) {
-        UserRole userRole = userRepository.findByEmail(email).get().getUserRole();
+    private void setJwtTokenInHeader(Long id, String role, HttpServletResponse response) throws Exception {
+        String accessToken = jwtProvider.createAccessToken(id, role);
+        String refreshToken = jwtProvider.createRefreshToken(id, role);
 
-        String accessToken = jwtProvider.createAccessToken(email, userRole);
-        String refreshToken = jwtProvider.createRefreshToken(email, userRole);
+        jwtProvider.setHeaderAccessToken(response, accessToken);
+        jwtProvider.setHeaderRefreshToken(response, refreshToken);
 
-
-        jwtProvider.setHeaderAT(response, accessToken);
-        jwtProvider.setHeaderRT(response, refreshToken);
-
-        redisService.setValues(refreshToken, email);
     }
+    public void reissueToken(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = jwtProvider.resolveRefreshToken(request);
+
+        jwtProvider.validateRefreshToken(refreshToken);
+
+        String newAccessToken = jwtProvider.reissueAccessToken(refreshToken, response);
+
+        jwtProvider.setHeaderAccessToken(response, newAccessToken);
+
+    }
+
 
 
 }

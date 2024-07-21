@@ -1,9 +1,8 @@
 package com.example.demo.core;
 
-import com.example.demo.user.jwt.JwtAuthorizationTokenFilter;
-import com.example.demo.user.jwt.JwtProvider;
+import com.example.demo.user.service.jwt.JwtAuthorizationTokenFilter;
+import com.example.demo.user.service.jwt.JwtTokenProvider;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import com.example.demo.user.service.jwt.RedisService;
 import lombok.AllArgsConstructor;
 import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Bean;
@@ -29,37 +28,34 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    private final RedisService redisService;
-    private final JwtProvider jwtTokenProvider;
-
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        //CSRF, CORS
         http.csrf(AbstractHttpConfigurer::disable);
         http.cors(Customizer.withDefaults());
         http.httpBasic(AbstractHttpConfigurer::disable);
-
         http.formLogin(AbstractHttpConfigurer::disable);
-        http.httpBasic(AbstractHttpConfigurer::disable);
-
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/signup","/login", "/reissue","/post/**","/like/**").permitAll()
-//                .anyRequest().authenticated()
-                        .anyRequest().permitAll() // 이거 임시로 싹다 permitAll 해둘게용
+//                .requestMatchers("/user/join").permitAll()
+//                .requestMatchers("/**").permitAll()
+//                .requestMatchers("/login").permitAll()
+//                .requestMatchers("/user/**").permitAll()
+//                .requestMatchers("/attendance/**").permitAll()
+                        .anyRequest().permitAll()
         );
-
-
 
         http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(
                 SessionCreationPolicy.STATELESS));
 
-        http.addFilterBefore(new JwtAuthorizationTokenFilter(jwtTokenProvider, redisService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthorizationTokenFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+
 
 
 
         return http.build();
     }
+
 
 
 }

@@ -2,14 +2,12 @@ server:
   port: 8081
 spring:
   datasource:
-    url: ENC(17SHYt5RCAUf6KpSShtZjgcSevBkwT+GbCPWZxDDBkoyw2ZgfZncx81uxgTIVRWds+PE62f2z0ppBZScofnIkvgd6+IhMmJM6Tf7qC2XN5fN9/GKKbov6Q==)
-    username: ENC(lB7dmns7qvY2+qe7qLo/t1+yFTO1yjTk)
-    password: ENC(x0+kZwYDVNYwmFGkk/bUPDEvyizg+wGg)
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  data:
-    redis:
-      host: redis
-      port: 6379
+    url: ENC(5PeBklAf+Z6lun3ZEFq862L9zcFw5Vvaj+LVjwqPpIH7qB8ymb1X1fKl7hvVg7rWHXTSvVSgZj5hdEwbvKtL1fbxsoWYzkIFi+taNkyxUwnT8nIUdQa2EqnJcG8WVU1VwQo9rPDl43dHy1nza2m2ogyt6w+tj7k8L2fEl3RuTjc=)
+    driver-class-name: org.postgresql.Driver
+#  data:
+#    redis:
+#      host: redis
+#      port: 6379
   jpa:
     hibernate:
       ddl-auto: create
@@ -20,10 +18,12 @@ spring:
         format_sql: true
     open-in-view: false
 
-  jwt:
-    secret: ENC(FT9pgO6cJqjr0IExg4aQ4ImDHu4W9Q2N)
-    accessTokenExpiration: 300000
-    refreshTokenExpiration: 600000
+jwt:
+  secretKey: wpdlejqmfdbxl
+  accessExpiration: 300000
+  refreshExpiration: 600000
+  aesKey: aesEncryptKeyeee
+#
 jasypt:
   encryptor:
     bean: jasyptStringEncryptor
