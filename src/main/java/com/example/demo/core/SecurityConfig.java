@@ -1,0 +1,65 @@
+package com.example.demo.core;
+
+import com.example.demo.user.jwt.JwtAuthorizationTokenFilter;
+import com.example.demo.user.jwt.JwtProvider;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import com.example.demo.user.service.jwt.RedisService;
+import lombok.AllArgsConstructor;
+import org.springframework.security.config.Customizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+
+@Configuration
+@EnableWebSecurity
+@AllArgsConstructor
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    private final RedisService redisService;
+    private final JwtProvider jwtTokenProvider;
+
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        //CSRF, CORS
+        http.csrf(AbstractHttpConfigurer::disable);
+        http.cors(Customizer.withDefaults());
+        http.httpBasic(AbstractHttpConfigurer::disable);
+
+        http.formLogin(AbstractHttpConfigurer::disable);
+        http.httpBasic(AbstractHttpConfigurer::disable);
+
+        http.authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/signup","/login", "/reissue","/post/**","/like/**").permitAll()
+//                .anyRequest().authenticated()
+                        .anyRequest().permitAll() // 이거 임시로 싹다 permitAll 해둘게용
+        );
+
+
+
+        http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(
+                SessionCreationPolicy.STATELESS));
+
+        http.addFilterBefore(new JwtAuthorizationTokenFilter(jwtTokenProvider, redisService), UsernamePasswordAuthenticationFilter.class);
+
+
+
+        return http.build();
+    }
+
+
+}
