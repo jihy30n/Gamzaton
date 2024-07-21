@@ -26,4 +26,4 @@ jwt:
 #
 jasypt:
   encryptor:
-    bean: jasyptStringEncryptor
+    password: ${JASYPT_ENCRYPTOR_PASSWORD}
