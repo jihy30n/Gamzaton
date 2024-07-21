@@ -1,6 +1,5 @@
 package com.example.demo.user.service.jwt;
 
-
 import com.example.demo.core.error.ErrorCode;
 import com.example.demo.core.error.exeption.InvalidTokenException;
 import com.example.demo.core.error.exeption.NotFoundException;
@@ -17,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class RedisService {
-    private final RedisTemplate redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public void setValues(String token, String email) {
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
@@ -59,6 +58,7 @@ public class RedisService {
     public void delValues(String token) {
         redisTemplate.delete(token);
     }
+
     public Object getEmailOtpData(String key) {
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         Object value = valueOperations.get(key);
@@ -67,7 +67,4 @@ public class RedisService {
         }
         return value;
     }
-
-
-
 }
